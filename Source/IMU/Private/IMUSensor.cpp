@@ -2,15 +2,15 @@
 
 
 #include "IMUSensor.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine.h" 
 
 // Sets default values
 AIMUSensor::AIMUSensor()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
-	Frequency = 30.0f;
+	PrimaryActorTick.bCanEverTick = false;
 
 	// Default to Genova values -> 60° 37' -> 1.05796041 rad
 	MagneticDip = 1.05796041f;
@@ -18,10 +18,18 @@ AIMUSensor::AIMUSensor()
 	MagneticFieldStrength = 47403.0;
 	MagneticDistance = 100000.0f;
 
-	_previousLocation = GetActorLocation();
-	_previousVelocity = FVector::ZeroVector;
-	_previousRotation = GetActorRotation().Quaternion();
-	_previousTime = FPlatformTime::Seconds();
+	NorthPoleLocation = FVector(MagneticDistance, 0.0f, -MagneticDistance / cos(MagneticDip));
+
+	//IMUmesh = CreateDefaultSubobject<UStaticMeshComponent>("IMUmesh");
+	//IMUmesh->SetupAttachment(RootComponent);
+
+	CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>("CapsuleVelComp");
+	CapsuleComp->SetupAttachment(RootComponent);
+
+	_previousVel = FVector::ZeroVector;
+	_previousRot = FQuat::Identity;
+
+	_lastIMUTstamp = 0.0f;
 
 }
 
@@ -30,104 +38,112 @@ void AIMUSensor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FVector MagneticLocation = FVector(MagneticDistance, 0.0f, -cos(MagneticDip) * MagneticDistance);
+}
 
-	FActorSpawnParameters params;
-	params.Name = FName("NorthPole");
+//TTuple<FVector, FVector, FVector> AIMUSensor::GetIMUvalues(float dT) {
+//	FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
+//
+//	FVector B = GetMagneticField(currentRot);
+//	FVector Acc = GetAcceleration(currentRot, dT);
+//	FVector W = GetAngularVelocity(currentRot, dT);
+//
+//	return TTuple<FVector, FVector, FVector>(B, Acc, W);
+//}
 
-	FVector scale = FVector(1.0, 1.0, 1.0);
 
-	FTransform *tf = new FTransform(FQuat::Identity.Rotator(), MagneticLocation, scale);
+FVector AIMUSensor::GetMagneticField(FQuat currentRot)
+{
 
-	//ANorthPole = GetWorld()->SpawnActor(AActor::StaticClass(), tf, params);
+	FVector MagneticDirection = NorthPoleLocation - GetActorLocation();
+	MagneticDirection.Normalize();
+	MagneticDirection *= MagneticFieldStrength;
+
+	FQuat inv = currentRot.Inverse();
+	//FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
+	return inv.RotateVector(MagneticDirection);
 	
 }
 
-FVector AIMUSensor::GetAccelerometerReadings()
-{
-	return FVector();
-}
 
-FVector AIMUSensor::GetGyroscopeReadings()
-{
-	return FVector();
-}
-
-FVector AIMUSensor::GetMagnetometerReadings(FQuat orientation)
-{
-	if (ensure(ANorthPole))
-	{
-		FVector MagneticDirection = ANorthPole->GetActorLocation() - GetActorLocation();
-		MagneticDirection.Normalize();
-		MagneticDirection *= MagneticFieldStrength;
-
-		FQuat inv = orientation.Inverse();
-	
-		return inv.RotateVector(MagneticDirection);
-	}
-	return FVector::ZeroVector;
-}
-
-FVector AIMUSensor::DeriveQuaternion(FQuat curr, FQuat prev, double deltaT)
+FVector AIMUSensor::GetAngularVelocity(float dT)
 {
 	FVector AngularVelocities;
 
-	AngularVelocities.X = (2 / deltaT) * (prev.W * curr.X - prev.X * curr.W - prev.Y * curr.Z + prev.Z * curr.Y);
-	AngularVelocities.Y = (2 / deltaT) * (prev.W * curr.Y + prev.X * curr.Z - prev.Y * curr.W - prev.Z * curr.X);
-	AngularVelocities.Z = (2 / deltaT) * (prev.W * curr.Z - prev.X * curr.Y + prev.Y * curr.X - prev.Z * curr.W);
+	FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
+
+	AngularVelocities.X = (2 / dT) * (_previousRot.W * currentRot.X - _previousRot.X * currentRot.W - _previousRot.Y * currentRot.Z + _previousRot.Z * currentRot.Y);
+	AngularVelocities.Y = (2 / dT) * (_previousRot.W * currentRot.Y + _previousRot.X * currentRot.Z - _previousRot.Y * currentRot.W - _previousRot.Z * currentRot.X);
+	AngularVelocities.Z = (2 / dT) * (_previousRot.W * currentRot.Z - _previousRot.X * currentRot.Y + _previousRot.Y * currentRot.X - _previousRot.Z * currentRot.W);
+
+	_previousRot = currentRot;
 
 	return AngularVelocities;
 }
 
-FVector AIMUSensor::DeriveVector(FVector curr, FVector prev, double deltaT)
+FVector AIMUSensor::GetAngularVelocity(FQuat currentRot, float dT)
 {
-	return ( curr - prev ) / deltaT;
+	FVector AngularVelocities;
+
+	AngularVelocities.X = (2 / dT) * (_previousRot.W * currentRot.X - _previousRot.X * currentRot.W - _previousRot.Y * currentRot.Z + _previousRot.Z * currentRot.Y);
+	AngularVelocities.Y = (2 / dT) * (_previousRot.W * currentRot.Y + _previousRot.X * currentRot.Z - _previousRot.Y * currentRot.W - _previousRot.Z * currentRot.X);
+	AngularVelocities.Z = (2 / dT) * (_previousRot.W * currentRot.Z - _previousRot.X * currentRot.Y + _previousRot.Y * currentRot.X - _previousRot.Z * currentRot.W);
+
+	_previousRot = currentRot;
+
+	return AngularVelocities;
 }
 
-// Called every frame
-void AIMUSensor::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 
-	
+FVector AIMUSensor::GetAcceleration(float dT)
+{
+	// Call the physics engine to get velocity in world frame, then divide by 100 to get m/s
+	FVector currentVel = CapsuleComp->GetPhysicsLinearVelocity() / 100.0f;
+
+	// Derive to get acceleration
+	FVector Acceleration = (currentVel - _previousVel) / dT;
+
+	// Add gravity
+	//Acceleration += FVector(0.0f, 0.0f, -9.8f);
+
+	// Get rotation and bring the acceleration vector in the IMU's local frame
+	//FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
+	//Acceleration = currentRot.RotateVector(Acceleration);
+
+	// Update last velocity
+	_previousVel = currentVel;
+
+	return Acceleration;
 }
 
-inline FQuat AIMUSensor::Right2LeftQuaternion(FQuat Quat)
+FVector AIMUSensor::GetAcceleration(FQuat currentRot, float dT)
 {
-	return FQuat(-Quat.X, -Quat.Z, -Quat.Y, Quat.W);
+	// Call the physics engine to get velocity in world frame, then divide by 100 to get m/s
+	FVector currentVel = CapsuleComp->GetPhysicsLinearVelocity() / 100.0f;
+
+	// Derive to get acceleration
+	FVector Acceleration = (currentVel - _previousVel) / dT;
+
+	// Add gravity
+	Acceleration += FVector(0.0f, 0.0f, -9.8f);
+
+	// Get rotation and bring the acceleration vector in the IMU's local frame
+	Acceleration = currentRot.RotateVector(Acceleration);
+
+	// Update last velocity
+	_previousVel = currentVel;
+
+	return Acceleration;
 }
 
-void AIMUSensor::IMUCycle()
+float AIMUSensor::GetDT(float currentTime)
 {
-	// Get updated position and orientation
-	FVector tempLoc = GetActorLocation() / 100.0f;
-	FQuat tempRot = GetActorRotation().Quaternion();
+	// Compute difference, substitute old value and return diff
+	float diff = currentTime - _lastIMUTstamp;
+	_lastIMUTstamp = currentTime;
 
-	// Derive position and orientation
-	FVector newVelocity = DeriveVector(tempLoc, _previousLocation, DeltaT);
-	SPD_val = newVelocity;
-	DeltaS = newVelocity - _previousVelocity;
-	ACC_val = DeriveVector(newVelocity, _previousVelocity, DeltaT);
-
-	//GYR_val = -DeriveQuaternion(tempRot, _previousRotation, deltaT);
-
-	FVector MAG_val_t = GetMagnetometerReadings(tempRot);
-	if (!MAG_val_t.IsZero()) {
-		MAG_val = MAG_val_t;
-	}
-
-	// Update position, orientation and deltaT
-	_previousVelocity = newVelocity;
-	_previousLocation = tempLoc;
-	_previousRotation = tempRot;
+	return diff;
 }
 
-bool AIMUSensor::FileSaveString(FString SaveTextB, FString FileNameB)
-{
-	return FFileHelper::SaveStringToFile(SaveTextB, *(FPaths::ProjectDir() + FileNameB), FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), FILEWRITE_Append);
-}
 
-bool AIMUSensor::FileLoadString(FString FileNameA, FString& SaveTextA)
-{
-	return FFileHelper::LoadFileToString(SaveTextA, *(FPaths::ProjectDir() + FileNameA));
-}
+
+

@@ -6,10 +6,13 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "QuaternionOperations.generated.h"
 
+class USkeletalMesh;
 /**
  * 
  */
 UCLASS()
+
+
 class IMU_API UQuaternionOperations : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
@@ -25,6 +28,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "QuaternionOperations")
 	static FString QuaternionToString(FQuat rotation);
 
+	static std::string QuaternionToStdString(FQuat rotation);
+
 	UFUNCTION(BlueprintCallable, Category = "QuaternionOperations")
 	static FQuat StringToQuaternion(FString quatString);
+
+	UFUNCTION(BlueprintCallable, Category = "QuaternionOperations")
+	static void AddSocket(USkeletalMesh* skeleton);
+
 };

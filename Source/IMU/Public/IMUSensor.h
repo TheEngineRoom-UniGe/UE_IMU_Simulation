@@ -4,7 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Templates/Tuple.h"
 #include "IMUSensor.generated.h"
+
+class UCapsuleComponent;
+class UStaticMeshComponent;
 
 UCLASS()
 class AIMUSensor : public AActor
@@ -15,26 +19,28 @@ public:
 	// Sets default values for this actor's properties
 	AIMUSensor();
 
+	UFUNCTION(BlueprintCallable, Category = "IMU")
+	FVector GetMagneticField(FQuat currentRot);
+
+	UFUNCTION(BlueprintCallable, Category = "IMU")
+	FVector GetAngularVelocity(float dT);
+	FVector GetAngularVelocity(FQuat currentRot, float dT);
+
+	UFUNCTION(BlueprintCallable, Category = "IMU")
+	FVector GetAcceleration(float dT);
+	FVector GetAcceleration(FQuat currentRot, float dT);
+
+	UFUNCTION(BlueprintCallable, Category = "IMU")
+	float GetDT(float currentTime);
+
+
 protected:
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "IMU")
-	float Frequency;
 	UPROPERTY(BlueprintReadWrite, Category = "IMU")
-	float DeltaT;
+	UCapsuleComponent* CapsuleComp;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Accelerometer")
-	float ACC_fullrange;
-	UPROPERTY(BlueprintReadOnly, Category = "Accelerometer")
-	FVector ACC_val;	
-	UPROPERTY(BlueprintReadOnly, Category = "Accelerometer")
-	FVector SPD_val;
-	UPROPERTY(BlueprintReadOnly, Category = "Accelerometer")
-	FVector DeltaS;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gyroscope")
-	float GYR_fullrange;
-	UPROPERTY(BlueprintReadOnly, Category = "Gyroscope")
-	FVector GYR_val;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "IMU")
+	UStaticMeshComponent* IMUmesh;
 
 	// Values for MagneticDip can be found at https://www.magnetic-declination.com/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Magnetometer")
@@ -45,50 +51,24 @@ protected:
 	float MagneticFieldStrength;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Magnetometer")
 	float MAG_fullrange;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Magnetometer")
+	FVector NorthPoleLocation;
 	UPROPERTY(BlueprintReadOnly, Category = "Magnetometer")
 	FVector MAG_val;
-	UPROPERTY(BlueprintReadWrite, Category = "Magnetometer")
-	AActor* ANorthPole;
+
 
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UFUNCTION(BlueprintCallable)
-	FVector GetAccelerometerReadings();
 
-	UFUNCTION(BlueprintCallable)
-	FVector GetGyroscopeReadings();
-
-	UFUNCTION(BlueprintCallable)
-	inline FVector GetMagnetometerReadings(FQuat orientation);
-
-	inline FVector DeriveQuaternion(FQuat curr, FQuat prev, double deltaT);
-
-	inline FVector DeriveVector(FVector curr, FVector prev, double deltaT);
-
-	inline FQuat Right2LeftQuaternion(FQuat Quat);
-
-	UFUNCTION(BlueprintCallable)
-	void IMUCycle();
-
-	UFUNCTION(BlueprintCallable, Category = "Save")
-	static bool FileSaveString(FString SaveTextB, FString FileNameB);
-
-	UFUNCTION(BlueprintPure, Category = "Save")
-	static bool FileLoadString(FString FileNameA, FString& SaveTextA);
+	//UFUNCTION(BlueprintCallable, Category = "IMU")
+	//TTuple<FVector, FVector, FVector> GetIMUvalues(float dT);
 
 private:
 
-	FVector _previousLocation;
-	FVector _previousVelocity;
+	FVector _previousVel;
+	FQuat _previousRot;
 
-	FQuat _previousRotation;
-
-	double _previousTime;
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
+	float _lastIMUTstamp;
 };

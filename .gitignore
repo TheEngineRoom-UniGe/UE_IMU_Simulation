@@ -1,6 +1,20 @@
 # Visual Studio 2015 user specific files
 .vs/
 
+# Folders for our dataset
+Dataset/
+static/
+
+# Animations
+Content/Characters
+Content/inAnimations
+Content/materials
+Content/mocapDatasets
+Content/mocapDatasetsRetarget
+Content/retargeted
+Content/AnimStarterPack
+
+
 # Compiled Object files
 *.slo
 *.lo

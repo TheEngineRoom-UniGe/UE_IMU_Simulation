@@ -3,6 +3,7 @@
 #pragma once
 
 #include <chrono>
+#include <string>
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "QueueFileSaver.generated.h"
@@ -47,15 +48,30 @@ public:
 	// Sets default values for this component's properties
 	UQueueFileSaver();
 
+	void EnqueueAnimationString(std::string newTxtSkeletonPose);
+
+	void EnqueueIMUString(std::string newTxtIMUOrientation);
+
+	void EnqueueIMULocString(std::string newTxtIMULocation);
+
+	void EnqueueIMUAccString(std::string newTxtIMUAcceleration);
+
+	void EnqueueIMUGyroString(std::string newTxtIMUGyroscope);
+
+	void EnqueueIMUMagString(std::string newTxtIMUMagnetometer);
+
+
 protected:
+
+	FDateTime StartTime;
 
 	UPROPERTY(EditDefaultsOnly, Category="Saving")
 	float SavingFrequency;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Saving")
-	int Trial;
+	//UPROPERTY(EditDefaultsOnly, Category = "Saving")
+	//int Trial;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Saving")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Saving")
 	FString ActionName;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Saving")
@@ -63,24 +79,36 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Saving")
 	FString IMUFilename;
+	UPROPERTY(EditDefaultsOnly, Category = "Saving")
+	FString IMULocFilename;
+	UPROPERTY(EditDefaultsOnly, Category = "Saving")
+	FString IMUAccFilename;
+	UPROPERTY(EditDefaultsOnly, Category = "Saving")
+	FString IMUGyroFilename;
+	UPROPERTY(EditDefaultsOnly, Category = "Saving")
+	FString IMUMagFilename;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Saving")
 	FString cr = LINE_TERMINATOR;
 
-	TQueue<FString> AnimationRecordingQueue;
+	TQueue<std::string> AnimationRecordingQueue;
 	TQueue<FAnimationLine> AnimationPlaybackQueue;
-	TQueue<FString> IMUOrientationRecordingQueue;
+	TQueue<std::string> IMUOrientationRecordingQueue;
+	TQueue<std::string> IMULocationRecordingQueue;
+	TQueue<std::string> IMUAccelerationRecordingQueue;
+	TQueue<std::string> IMUGyroscopeRecordingQueue;
+	TQueue<std::string> IMUMagnetometerRecordingQueue;
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	void FileSaveString();
+	void FileSaveAnimString();
+	void FileSaveRotString();
+	void FileSaveLocString();
+	void FileSaveAccString();
 
-	UFUNCTION(BlueprintCallable)
-	void EnqueueAnimationString(FString newTxtSkeletonPose);
 
-	UFUNCTION(BlueprintCallable)
-	void EnqueueIMUString(FString newTxtIMUOrientation);
+	//void FileSaveString();
 
 	UFUNCTION(BlueprintCallable)
 	FAnimationLine DequeueFString();
@@ -91,10 +119,15 @@ protected:
 	void ParseAndLoadAnimationFile(FString buffer);
 
 	UFUNCTION(BlueprintCallable)
-	float CurrentTimeMillis();
+	double GetTimestamp();
+
+	UFUNCTION(BlueprintCallable)
+	FDateTime ResetStartTime();
+
+	//UFUNCTION(BlueprintCallable)
+	//FString CreateAnimationLine(TArray<FName> SockNames, UPoseableMeshComponent* Mesh, double TimeStamp);
 
 private:
-	std::chrono::high_resolution_clock::time_point startTime;
 
 };
 
