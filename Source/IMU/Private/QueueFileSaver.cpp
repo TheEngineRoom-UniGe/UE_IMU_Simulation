@@ -32,15 +32,20 @@ void UQueueFileSaver::BeginPlay()
 	FTimerHandle rotTimerHandle;
 	FTimerHandle locTimerHandle;
 	FTimerHandle accTimerHandle;
+	FTimerHandle gyrTimerHandle;
+	FTimerHandle magTimerHandle;
 
-	GetWorld()->GetTimerManager().SetTimer(animTimerHandle, this, &UQueueFileSaver::FileSaveAnimString, 1/SavingFrequency, true);
-	GetWorld()->GetTimerManager().SetTimer(rotTimerHandle, this, &UQueueFileSaver::FileSaveRotString, 1 / SavingFrequency, true);
-	GetWorld()->GetTimerManager().SetTimer(locTimerHandle, this, &UQueueFileSaver::FileSaveLocString, 1 / SavingFrequency, true);
-	GetWorld()->GetTimerManager().SetTimer(accTimerHandle, this, &UQueueFileSaver::FileSaveAccString, 1 / SavingFrequency, true);
+	GetWorld()->GetTimerManager().SetTimer(animTimerHandle, this, &UQueueFileSaver::FileSaveAnimString, 1 / SavingFrequency, true);
+	GetWorld()->GetTimerManager().SetTimer(rotTimerHandle,  this, &UQueueFileSaver::FileSaveRotString,  1 / SavingFrequency, true);
+	GetWorld()->GetTimerManager().SetTimer(locTimerHandle,  this, &UQueueFileSaver::FileSaveLocString,  1 / SavingFrequency, true);
+	GetWorld()->GetTimerManager().SetTimer(accTimerHandle,  this, &UQueueFileSaver::FileSaveAccString,  1 / SavingFrequency, true);
+	GetWorld()->GetTimerManager().SetTimer(gyrTimerHandle,  this, &UQueueFileSaver::FileSaveGyrString,  1 / SavingFrequency, true);
+	GetWorld()->GetTimerManager().SetTimer(magTimerHandle,  this, &UQueueFileSaver::FileSaveMagString,  1 / SavingFrequency, true);
+
 }
 
 
-void UQueueFileSaver::FileSaveAnimString()
+void UQueueFileSaver::FileSaveAnimString()   
 {
 	TQueue<std::string>* AnimQ = &AnimationRecordingQueue;
 
@@ -159,6 +164,68 @@ void UQueueFileSaver::FileSaveAccString()
 				accFile << outStringAcc << std::endl;
 			}
 			accFile.close();
+		});
+
+
+	return;
+}
+
+void UQueueFileSaver::FileSaveGyrString()
+{
+	TQueue<std::string>* IMUGyr = &IMUGyroscopeRecordingQueue;
+
+	FString FolderPath = FPaths::ProjectDir() + "Dataset/" + ActionName;
+
+
+	FString IMUGyroSavingPath = FolderPath + "/" + IMUGyroFilename;
+
+	if (!std::filesystem::exists(TCHAR_TO_UTF8(*FolderPath))) {
+		std::filesystem::create_directories(TCHAR_TO_UTF8(*FolderPath));
+	}
+
+	AsyncTask(ENamedThreads::AnyThread, [IMUGyr, IMUGyroSavingPath]()
+		{
+			std::string outStringGyr = "";
+			std::ofstream gyrFile;
+			gyrFile.open(TCHAR_TO_UTF8(*IMUGyroSavingPath), std::ios_base::app);
+			while (!IMUGyr->IsEmpty())
+			{
+				IMUGyr->Dequeue(outStringGyr);
+				//FFileHelper::SaveStringToFile(TCHAR_TO_UTF8(*outStringLoc), *IMULocSavingPath, FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), FILEWRITE_Append);
+				gyrFile << outStringGyr << std::endl;
+			}
+			gyrFile.close();
+		});
+
+
+	return;
+}
+
+void UQueueFileSaver::FileSaveMagString()
+{
+	TQueue<std::string>* IMUMag = &IMUMagnetometerRecordingQueue;
+
+	FString FolderPath = FPaths::ProjectDir() + "Dataset/" + ActionName;
+
+
+	FString IMUMagSavingPath = FolderPath + "/" + IMUMagFilename;
+
+	if (!std::filesystem::exists(TCHAR_TO_UTF8(*FolderPath))) {
+		std::filesystem::create_directories(TCHAR_TO_UTF8(*FolderPath));
+	}
+
+	AsyncTask(ENamedThreads::AnyThread, [IMUMag, IMUMagSavingPath]()
+		{
+			std::string outStringMag = "";
+			std::ofstream magFile;
+			magFile.open(TCHAR_TO_UTF8(*IMUMagSavingPath), std::ios_base::app);
+			while (!IMUMag->IsEmpty())
+			{
+				IMUMag->Dequeue(outStringMag);
+				//FFileHelper::SaveStringToFile(TCHAR_TO_UTF8(*outStringLoc), *IMULocSavingPath, FFileHelper::EEncodingOptions::AutoDetect, &IFileManager::Get(), FILEWRITE_Append);
+				magFile << outStringMag << std::endl;
+			}
+			magFile.close();
 		});
 
 

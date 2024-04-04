@@ -106,6 +106,9 @@ protected:
 	void FileSaveRotString();
 	void FileSaveLocString();
 	void FileSaveAccString();
+	void FileSaveGyrString();
+	void FileSaveMagString();
+
 
 
 	//void FileSaveString();

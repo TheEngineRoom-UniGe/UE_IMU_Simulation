@@ -58,24 +58,44 @@ FVector AIMUSensor::GetMagneticField(FQuat currentRot)
 	MagneticDirection.Normalize();
 	MagneticDirection *= MagneticFieldStrength;
 
+
 	FQuat inv = currentRot.Inverse();
 	//FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
 	return inv.RotateVector(MagneticDirection);
 	
 }
 
-
-FVector AIMUSensor::GetAngularVelocity(float dT)
+FVector AIMUSensor::GetMagneticField()
 {
-	FVector AngularVelocities;
 
-	FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
+	FVector MagneticDirection = NorthPoleLocation - GetActorLocation();
+	MagneticDirection.Normalize();
+	MagneticDirection *= MagneticFieldStrength;
 
-	AngularVelocities.X = (2 / dT) * (_previousRot.W * currentRot.X - _previousRot.X * currentRot.W - _previousRot.Y * currentRot.Z + _previousRot.Z * currentRot.Y);
-	AngularVelocities.Y = (2 / dT) * (_previousRot.W * currentRot.Y + _previousRot.X * currentRot.Z - _previousRot.Y * currentRot.W - _previousRot.Z * currentRot.X);
-	AngularVelocities.Z = (2 / dT) * (_previousRot.W * currentRot.Z - _previousRot.X * currentRot.Y + _previousRot.Y * currentRot.X - _previousRot.Z * currentRot.W);
+	FQuat currentRot = GetCapsuleAbsoluteRotation().Quaternion();
+	currentRot = currentRot.Inverse();
 
-	_previousRot = currentRot;
+	//FQuat inv = currentRot.Inverse();
+	//FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
+	return currentRot.RotateVector(MagneticDirection);
+
+}
+
+
+FVector AIMUSensor::GetAngularVelocity()
+{
+	//FVector AngularVelocities;
+
+	//FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
+
+	//AngularVelocities.X = (2 / dT) * (_previousRot.W * currentRot.X - _previousRot.X * currentRot.W - _previousRot.Y * currentRot.Z + _previousRot.Z * currentRot.Y);
+	//AngularVelocities.Y = (2 / dT) * (_previousRot.W * currentRot.Y + _previousRot.X * currentRot.Z - _previousRot.Y * currentRot.W - _previousRot.Z * currentRot.X);
+	//AngularVelocities.Z = (2 / dT) * (_previousRot.W * currentRot.Z - _previousRot.X * currentRot.Y + _previousRot.Y * currentRot.X - _previousRot.Z * currentRot.W);
+
+	//_previousRot = currentRot;
+
+	FRotator currentRot = GetCapsuleAbsoluteRotation().GetInverse();
+	FVector AngularVelocities = currentRot.RotateVector(CapsuleComp->GetPhysicsAngularVelocityInDegrees());
 
 	return AngularVelocities;
 }
@@ -103,11 +123,12 @@ FVector AIMUSensor::GetAcceleration(float dT)
 	FVector Acceleration = (currentVel - _previousVel) / dT;
 
 	// Add gravity
-	//Acceleration += FVector(0.0f, 0.0f, -9.8f);
+	Acceleration += FVector(0.0f, 0.0f, -9.8f);
 
 	// Get rotation and bring the acceleration vector in the IMU's local frame
-	//FQuat currentRot = CapsuleComp->GetComponentRotation().Quaternion();
-	//Acceleration = currentRot.RotateVector(Acceleration);
+	FQuat currentRot = GetCapsuleAbsoluteRotation().Quaternion();
+	currentRot = currentRot.Inverse();
+	Acceleration = currentRot.RotateVector(Acceleration);
 
 	// Update last velocity
 	_previousVel = currentVel;
@@ -127,6 +148,7 @@ FVector AIMUSensor::GetAcceleration(FQuat currentRot, float dT)
 	Acceleration += FVector(0.0f, 0.0f, -9.8f);
 
 	// Get rotation and bring the acceleration vector in the IMU's local frame
+	currentRot = currentRot.Inverse();
 	Acceleration = currentRot.RotateVector(Acceleration);
 
 	// Update last velocity
@@ -142,6 +164,11 @@ float AIMUSensor::GetDT(float currentTime)
 	_lastIMUTstamp = currentTime;
 
 	return diff;
+}
+
+FRotator AIMUSensor::GetCapsuleAbsoluteRotation()
+{
+	return CapsuleComp->GetComponentRotation();
 }
 
 

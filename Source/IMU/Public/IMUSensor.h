@@ -20,10 +20,11 @@ public:
 	AIMUSensor();
 
 	UFUNCTION(BlueprintCallable, Category = "IMU")
+	FVector GetMagneticField();
 	FVector GetMagneticField(FQuat currentRot);
 
 	UFUNCTION(BlueprintCallable, Category = "IMU")
-	FVector GetAngularVelocity(float dT);
+	FVector GetAngularVelocity();
 	FVector GetAngularVelocity(FQuat currentRot, float dT);
 
 	UFUNCTION(BlueprintCallable, Category = "IMU")
@@ -32,6 +33,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "IMU")
 	float GetDT(float currentTime);
+
+	FRotator GetCapsuleAbsoluteRotation();
 
 
 protected:
@@ -56,14 +59,8 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Magnetometer")
 	FVector MAG_val;
 
-
-
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-
-	//UFUNCTION(BlueprintCallable, Category = "IMU")
-	//TTuple<FVector, FVector, FVector> GetIMUvalues(float dT);
 
 private:
 

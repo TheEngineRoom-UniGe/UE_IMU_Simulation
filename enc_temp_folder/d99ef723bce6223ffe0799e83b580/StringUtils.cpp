@@ -121,6 +121,11 @@ void UStringUtils::CreateAndEnqueueAnimLine(TArray<FName> BoneList, ULocalPoseab
 void UStringUtils::CreateAndEnqueueIMULine(TArray<AActor*> IMUList, float TStamp, UQueueFileSaver* qFileSaver)
 {
     // Initialize the animation line to the timestamp + ;
+    //FString IMURotLine = FString::SanitizeFloat(TStamp) + FString(";");
+    //FString IMULocLine = FString::SanitizeFloat(TStamp) + FString(";");
+    //FString IMUAccLine = FString::SanitizeFloat(TStamp) + FString(";");
+    //FString IMUGyrLine = FString::SanitizeFloat(TStamp) + FString(";");
+    //FString IMUMagLine = FString::SanitizeFloat(TStamp) + FString(";");
 
     string IMURotLine = to_string(TStamp) + ";";
     string IMULocLine = to_string(TStamp) + ";";
@@ -138,52 +143,84 @@ void UStringUtils::CreateAndEnqueueIMULine(TArray<AActor*> IMUList, float TStamp
             // Compute DeltaTime  
             float dT = imu->GetDT(TStamp);
 
-            // Need to put a minus on Y to get to right-handed system
+            //FQuat tmpIMUQuat = imu->GetActorRotation().Quaternion();
             FQuat tmpIMUQuat = imu->GetCapsuleAbsoluteRotation().Quaternion();
-            tmpIMUQuat.Y *= -1.0f;
+
+            //tmpIMUQuat.Y *= -1.0;
+            // Append Orientation
+            //IMURotLine.Append(
+            //    UQuaternionOperations::QuaternionToString(tmpIMUQuat) + FString(";")
+            //);
             IMURotLine += UQuaternionOperations::QuaternionToStdString(tmpIMUQuat) + ";";
-             
-            // Need to put a minus on Y to get to right-handed system
+        
             FVector tmpIMUloc = imu->GetActorLocation();
-            tmpIMUloc.Y *= -1.0f;
+            // Append Location
+   /*         IMULocLine.Append(
+                LocationToString(tmpIMUloc) + FString(";")
+            );*/
+
             IMULocLine += LocationToStdString(tmpIMUloc) + ";";
 
-            // Need to put a minus on Y to get to right-handed system
-            FVector tmpAcc = imu->GetAcceleration(dT);
-            tmpAcc.Y *= -1.0f;
-            IMUAccLine += LocationToStdString(tmpAcc) + ";";
+            //// Append Acceleration
+            //IMUAccLine.Append(
+            //    LocationToString(imu->GetAcceleration(tmpIMUQuat, dT))  + FString(";")
+            //);
+            IMUAccLine += LocationToStdString(imu->GetAcceleration(tmpIMUQuat, dT)) + ";";
 
-            // Need to put minus on Y to get to right-handed system
-            // Need to flip all rotations because they don't follow right-hand rule
-            // Result is minus on X and Z 
-            FVector tmpGyr = imu->GetAngularVelocity();
-            tmpGyr.X *= -1.0f;
-            tmpGyr.Z *= -1.0f;
-            IMUGyrLine += LocationToStdString(tmpGyr) + ";";
+            //// Append Angular Velocity
+            //IMUGyrLine.Append(
+            //    LocationToString(imu->GetAngularVelocity(tmpIMUQuat, dT)) + FString(";")
+            //);
+            IMUGyrLine += LocationToStdString(imu->GetAngularVelocity()) + ";";
 
-            // Need to put minus on Y to get to right-handed system, then need to put minus on Y and Z because the magnetometer has different reference on the sensor
-            // The result is just a minus on Z
-            FVector tmpMag = imu->GetMagneticField();
-            tmpMag.Z *= -1.0f;
-            IMUMagLine += LocationToStdString(tmpMag) + ";";
+            //// Append Magnetic Field
+            //IMUMagLine.Append(
+            //    LocationToString(imu->GetMagneticField(tmpIMUQuat)) + FString(";")
+            //);
+            IMUMagLine += LocationToStdString(imu->GetMagneticField(tmpIMUQuat)) + ";";
 
         }
     }
 
-    // Remove last ";"
+    // Remove last ;
     IMURotLine.pop_back();
     IMULocLine.pop_back();
     IMUAccLine.pop_back();
     IMUGyrLine.pop_back();
     IMUMagLine.pop_back();
 
-    // Enqueue strings
+    //IMURotLine.RemoveAt(IMURotLine.Len() - 1);
+    //IMULocLine.RemoveAt(IMURotLine.Len() - 1);
+    //IMUAccLine.RemoveAt(IMURotLine.Len() - 1);
+    //IMUGyrLine.RemoveAt(IMURotLine.Len() - 1);
+    //IMUMagLine.RemoveAt(IMURotLine.Len() - 1);
+
+    // Insert Line Terminator
+    //IMURotLine.Append(LINE_TERMINATOR);
+    //IMULocLine.Append(LINE_TERMINATOR);
+    //IMUAccLine.Append(LINE_TERMINATOR);
+    //IMUGyrLine.Append(LINE_TERMINATOR);
+    //IMUMagLine.Append(LINE_TERMINATOR);
+
+    //FString strArr[] =  {
+    //                        IMURotLine,
+    //                        IMULocLine,
+    //                        IMUAccLine,
+    //                        IMUGyrLine,
+    //                        IMUMagLine
+    //                    };
+
+    /*TArray<FString> TstrArr;*/
+    //TstrArr.Append(strArr, UE_ARRAY_COUNT(strArr));
+
     qFileSaver->EnqueueIMUString(IMURotLine);
     qFileSaver->EnqueueIMULocString(IMULocLine);
     qFileSaver->EnqueueIMUAccString(IMUAccLine);
     qFileSaver->EnqueueIMUGyroString(IMUGyrLine);
     qFileSaver->EnqueueIMUMagString(IMUMagLine);
-    
+    //qFileSaver->EnqueueIMUGyroString(IMUGyrLine);
+    //qFileSaver->EnqueueIMUMagString(IMUMagLine);
+
     return;
 }
 
